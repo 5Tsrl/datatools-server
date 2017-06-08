@@ -3,6 +3,7 @@ package com.conveyal.datatools.manager.models;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.conveyal.datatools.common.utils.SparkUtils;
 import com.conveyal.datatools.editor.datastore.GlobalTx;
 import com.conveyal.datatools.editor.datastore.VersionedDataStore;
 import com.conveyal.datatools.manager.DataManager;
@@ -212,7 +213,7 @@ public class FeedSource extends Model implements Cloneable {
                 statusMap.put("percentComplete", 100.0);
                 statusMap.put("error", true);
                 eventBus.post(statusMap);
-                halt(304, message);
+                halt(304, SparkUtils.formatJSON(message, 304));
                 return null;
             }
 
@@ -234,7 +235,7 @@ public class FeedSource extends Model implements Cloneable {
                 statusMap.put("percentComplete", 100.0);
                 statusMap.put("error", true);
                 eventBus.post(statusMap);
-                halt(400, message);
+                halt(400, SparkUtils.formatJSON(message, 400));
                 return null;
             }
         } catch (IOException e) {
@@ -245,7 +246,7 @@ public class FeedSource extends Model implements Cloneable {
             statusMap.put("error", true);
             eventBus.post(statusMap);
             e.printStackTrace();
-            halt(400, message);
+            halt(400, SparkUtils.formatJSON(message, 400));
             return null;
         } catch (HaltException e) {
             LOG.warn("Halt thrown", e);
@@ -276,8 +277,8 @@ public class FeedSource extends Model implements Cloneable {
             this.save();
 
             NotifyUsersForSubscriptionJob notifyFeedJob = new NotifyUsersForSubscriptionJob("feed-updated", this.id, "New feed version created for " + this.name);
-            Thread notifyThread = new Thread(notifyFeedJob);
-            notifyThread.start();
+            DataManager.lightExecutor.execute(notifyFeedJob);
+
             String message = String.format("Fetch complete for %s", this.name);
             LOG.info(message);
             statusMap.put("message", message);
