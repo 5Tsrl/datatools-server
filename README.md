@@ -1,6 +1,7 @@
-# Transit Data Manager
+# TransitCafé WS
 
-The core application for Conveyal's transit data tools suite.
+Web Service application for TransitCafé web application. 
+Forked from Conveyal's transit data tools suite.
 
 ## Documentation
 
