@@ -137,12 +137,10 @@ public class FeedSourceController {
 
         // notify users after successful save
         NotifyUsersForSubscriptionJob notifyFeedJob = new NotifyUsersForSubscriptionJob("feed-updated", source.id, "Feed property updated for " + source.name);
-        Thread notifyThread = new Thread(notifyFeedJob);
-        notifyThread.start();
+        DataManager.lightExecutor.execute(notifyFeedJob);
 
         NotifyUsersForSubscriptionJob notifyProjectJob = new NotifyUsersForSubscriptionJob("project-updated", source.projectId, "Project updated (feed source property for " + source.name + ")");
-        Thread notifyProjectThread = new Thread(notifyProjectJob);
-        notifyProjectThread.start();
+        DataManager.lightExecutor.execute(notifyProjectJob);
 
         return source;
     }
@@ -165,15 +163,12 @@ public class FeedSourceController {
             if(entry.getKey().equals("url")) {
                 String url = entry.getValue().asText();
                 try {
-                    source.url = new URL(url);
-
+                    source.url = entry.getValue().isNull() ? null : new URL(url);
                     // reset the last fetched date so it can be fetched again
                     source.lastFetched = null;
-
                 } catch (MalformedURLException e) {
-                    halt(400, "URL '" + url + "' not valid.");
+                    halt(400, SparkUtils.formatJSON("URL '" + url + "' not valid.", 400));
                 }
-
             }
 
             if(entry.getKey().equals("retrievalMethod")) {
@@ -256,9 +251,9 @@ public class FeedSourceController {
         LOG.info("Fetching feed for source {}", s.name);
 
         Auth0UserProfile userProfile = req.attribute("user");
-        FetchSingleFeedJob job = new FetchSingleFeedJob(s, userProfile.getUser_id());
-
-        // Don't run in thread because we want to return the HTTP status of the fetch operation
+        // Don't run in executor because we want to return the embedded halt to return the HTTP status
+        // of the fetch operation
+        FetchSingleFeedJob job = new FetchSingleFeedJob(s, userProfile.getUser_id(), false);
         job.run();
 
         // WARNING: infinite 2D bounds Jackson error when returning job.result, so this method now returns true
@@ -274,7 +269,7 @@ public class FeedSourceController {
      * @param action action type (either "view" or "manage")
      * @return feedsource object for ID
      */
-    private static FeedSource requestFeedSourceById(Request req, String action) {
+    public static FeedSource requestFeedSourceById(Request req, String action) {
         String id = req.params("id");
         if (id == null) {
             halt(400, SparkUtils.formatJSON("Please specify id param", 400));

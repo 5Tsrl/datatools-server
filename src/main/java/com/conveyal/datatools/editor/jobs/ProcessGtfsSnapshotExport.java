@@ -201,6 +201,11 @@ public class ProcessGtfsSnapshotExport implements Runnable {
                         gtfsTrip.block_id = trip.blockId;
                         gtfsTrip.route_id = gtfsRoute.route_id;
                         gtfsTrip.trip_id = trip.getGtfsId();
+                        // TODO: figure out where a "" trip_id might have come from
+                        if (gtfsTrip.trip_id == null || gtfsTrip.trip_id.equals("")) {
+                            LOG.warn("Trip {} has no id for some reason (trip_id = {}). Skipping.", trip, gtfsTrip.trip_id);
+                            continue;
+                        }
                         // not using custom ids for calendars
                         gtfsTrip.service_id = feed.services.get(trip.calendarId).service_id;
                         gtfsTrip.trip_headsign = trip.tripHeadsign;
@@ -230,8 +235,8 @@ public class ProcessGtfsSnapshotExport implements Runnable {
                         if (pattern.shape != null && !pattern.useStraightLineDistances)
                             gtfsTrip.shape_id = pattern.id;
 
-                        // prefer trip wheelchair boarding value if available
-                        if (trip.wheelchairBoarding != null) {
+                        // prefer trip wheelchair boarding value if available and not UNKNOWN
+                        if (trip.wheelchairBoarding != null && !trip.wheelchairBoarding.equals(AttributeAvailabilityType.UNKNOWN)) {
                             gtfsTrip.wheelchair_accessible = trip.wheelchairBoarding.toGtfs();
                         } else if (route.wheelchairBoarding != null) {
                             gtfsTrip.wheelchair_accessible = route.wheelchairBoarding.toGtfs();
