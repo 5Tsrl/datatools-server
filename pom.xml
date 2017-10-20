@@ -111,6 +111,11 @@
             <name>check central first to avoid a lot of not found warnings</name>
             <url>https://repo1.maven.org/maven2</url>
         </repository>
+         <repository>
+            <id>nexus5T</id>
+            <name>nexus5T snapshots</name>
+            <url>http://panama:8888/repository/maven-snapshots/</url>
+        </repository>
         <repository>
             <id>conveyal</id>
             <name>conveyal</name>
@@ -169,7 +174,7 @@
 
         <dependency>
             <groupId>com.conveyal</groupId>
-            <artifactId>gtfs-lib</artifactId>
+            <artifactId>gtfs-lib-5t</artifactId>
             <version>3.0.0-SNAPSHOT</version>
         </dependency>
 
