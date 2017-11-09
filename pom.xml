@@ -6,7 +6,7 @@
 
     <groupId>com.conveyal</groupId>
     <artifactId>datatools-server</artifactId>
-    <version>2.0.0-SNAPSHOT</version>
+    <version>3.0.0-SNAPSHOT</version>
 
     <!-- Define where the source code for project lives -->
     <scm>
@@ -68,6 +68,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.7.0</version>
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
@@ -109,6 +110,10 @@
             <id>central2</id>
             <name>check central first to avoid a lot of not found warnings</name>
             <url>https://repo1.maven.org/maven2</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
         </repository>
          <repository>
             <id>nexus5T</id>
@@ -119,24 +124,37 @@
             <id>conveyal</id>
             <name>conveyal</name>
             <url>https://maven.conveyal.com</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
         </repository>
         <repository>
             <id>osgeo</id>
             <name>Open Source Geospatial Foundation Repository</name>
             <url>http://download.osgeo.org/webdav/geotools/</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
         </repository>
         <repository>
             <id>sonatype</id>
             <name>sonatype snapshots</name>
             <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-        </repository>
-        <repository>
             <snapshots>
                 <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
             </snapshots>
+        </repository>
+        <repository>
             <id>boundless</id>
             <name>Boundless Maven Repository</name>
             <url>https://repo.boundlessgeo.com/main</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
         </repository>
     </repositories>
 
@@ -174,7 +192,7 @@
         <dependency>
             <groupId>com.conveyal</groupId>
             <artifactId>gtfs-api</artifactId>
-            <version>1.2.0-SNAPSHOT</version>
+            <version>2.0.0</version>
         </dependency>
 
         <dependency>
@@ -192,7 +210,7 @@
         <dependency>
             <groupId>com.conveyal</groupId>
             <artifactId>r5</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <version>2.0.0</version>
         </dependency>
 
         <dependency>
