@@ -34,6 +34,8 @@ public class Auth0Users {
         String clientId = DataManager.getConfigPropertyAsText("AUTH0_CLIENT_ID");
 
         // always filter users by datatools client_id
+        // TODO: as of September 1st 2017, cannot search any of the app_metadata
+        // https://auth0.com/docs/api/management/v2/user-search
         String defaultQuery = "app_metadata.datatools.client_id:" + clientId;
         URIBuilder builder = new URIBuilder();
         builder.setScheme("https").setHost(AUTH0_DOMAIN).setPath("/api/v2/users");
@@ -43,11 +45,11 @@ public class Auth0Users {
         builder.setParameter("include_totals", Boolean.toString(includeTotals));
         if (searchQuery != null) {
             builder.setParameter("search_engine", "v2");
-            builder.setParameter("q", searchQuery + " AND " + defaultQuery);
+            builder.setParameter("q", searchQuery );//5t + " AND " + defaultQuery);
         }
         else {
             builder.setParameter("search_engine", "v2");
-            builder.setParameter("q", defaultQuery);
+            //5t builder.setParameter("q", defaultQuery);
         }
 
         URI uri = null;
