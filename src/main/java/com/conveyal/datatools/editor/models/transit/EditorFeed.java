@@ -25,6 +25,7 @@ public class EditorFeed extends Model implements Cloneable, Serializable {
     public String feedVersion;
     public LocalDate feedStartDate;
     public LocalDate feedEndDate;
+    public String feedId;
 
 //    public transient int numberOfRoutes, numberOfStops;
 //    @JsonProperty("numberOfRoutes")

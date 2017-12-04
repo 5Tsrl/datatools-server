@@ -109,16 +109,17 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
                 status.percentComplete = 8;
             }
             // load feed_info.txt
-            // FIXME add back in feed info!!
-//            if(inputFeedTables.feedInfo.size() > 0) {
-//                FeedInfo feedInfo = input.feedInfo.values().iterator().next();
-//                editorFeed.feedPublisherName = feedInfo.feed_publisher_name;
-//                editorFeed.feedPublisherUrl = feedInfo.feed_publisher_url;
-//                editorFeed.feedLang = feedInfo.feed_lang;
-//                editorFeed.feedEndDate = feedInfo.feed_end_date;
-//                editorFeed.feedStartDate = feedInfo.feed_start_date;
-//                editorFeed.feedVersion = feedInfo.feed_version;
-//            }
+            Iterator<com.conveyal.gtfs.model.FeedInfo> feedInfoIterator = inputFeedTables.feedInfo.iterator();
+              if(feedInfoIterator.hasNext()) {
+                com.conveyal.gtfs.model.FeedInfo feedInfo = feedInfoIterator.next();
+                editorFeed.feedPublisherName = feedInfo.feed_publisher_name;
+                editorFeed.feedPublisherUrl = feedInfo.feed_publisher_url;
+                editorFeed.feedLang = feedInfo.feed_lang;
+                editorFeed.feedEndDate = feedInfo.feed_end_date;
+                editorFeed.feedStartDate = feedInfo.feed_start_date;
+                editorFeed.feedVersion = feedInfo.feed_version;
+                editorFeed.feedId = feedInfo.feed_id;
+              }
             gtx.feeds.put(feedVersion.feedSourceId, editorFeed);
 
             // load the GTFS agencies
