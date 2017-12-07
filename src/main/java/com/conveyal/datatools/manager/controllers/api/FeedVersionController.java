@@ -175,6 +175,7 @@ public class FeedVersionController  {
         // TODO: Should the ability to create a feedVersion from snapshot be controlled by the 'edit-gtfs' privilege?
         FeedSource feedSource = requestFeedSourceById(req, "manage");
         FeedVersion feedVersion = new FeedVersion(feedSource);
+        feedVersion.snapshotId = req.queryParams("snapshotId");
         CreateFeedVersionFromSnapshotJob createFromSnapshotJob =
                 new CreateFeedVersionFromSnapshotJob(feedVersion, req.queryParams("snapshotId"), userProfile.getUser_id());
         DataManager.heavyExecutor.execute(createFromSnapshotJob);

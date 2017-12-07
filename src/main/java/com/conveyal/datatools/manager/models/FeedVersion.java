@@ -100,6 +100,12 @@ public class FeedVersion extends Model implements Serializable {
     @JsonView(JsonViews.DataDump.class)
     public String feedSourceId;
 
+    /**
+     * The snapshotId this version was generated from
+     */
+    @JsonView(JsonViews.DataDump.class)
+    public String snapshotId;
+
     public FeedSource.FeedRetrievalMethod retrievalMethod;
 
     @JsonIgnore
