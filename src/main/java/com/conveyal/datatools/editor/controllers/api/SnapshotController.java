@@ -160,6 +160,38 @@ public class SnapshotController {
         return null;
     }
 
+    /**
+     * Create snapshot from feedVersion and load/import into editor database.
+     */
+    public static Boolean restoreVersion (Request req, Response res) {
+
+//        Auth0UserProfile userProfile = req.attribute("user");
+        String feedVersionId = req.queryParams("feedVersionId");
+
+        if(feedVersionId == null) {
+            halt(400, SparkUtils.formatJSON("No FeedVersion ID specified", 400));
+        }
+
+        FeedVersion feedVersion = Persistence.feedVersions.getById(feedVersionId);
+        if(feedVersion == null) {
+            halt(404, SparkUtils.formatJSON("Could not find FeedVersion with ID " + feedVersionId, 404));
+        }
+
+        FeedSource feedSource = feedVersion.parentFeedSource();
+        // check user's permission to import snapshot
+        FeedSourceController.checkFeedSourcePermissions(req, feedSource, "edit");
+
+        String snapshotId = feedVersion.snapshotId;
+        req.attribute("id", snapshotId);
+//        ProcessGtfsSnapshotMerge processGtfsSnapshotMergeJob =
+//                new ProcessGtfsSnapshotMerge(feedVersion, userProfile.getUser_id());
+//
+//        DataManager.heavyExecutor.execute(processGtfsSnapshotMergeJob);
+        SnapshotController.restoreSnapshot(req, res);
+        halt(200, "{status: \"ok\"}");
+        return null;
+    }
+
     public static Object updateSnapshot (Request req, Response res) {
         String id = req.params("id");
         GlobalTx gtx = null;
@@ -362,6 +394,8 @@ public class SnapshotController {
         get(apiPrefix + "secure/snapshot", SnapshotController::getSnapshot, json::write);
         post(apiPrefix + "secure/snapshot", SnapshotController::createSnapshot, json::write);
         post(apiPrefix + "secure/snapshot/import", SnapshotController::importSnapshot, json::write);
+        //5t
+        post(apiPrefix + "secure/snapshot/restore", SnapshotController::restoreVersion, json::write);
         put(apiPrefix + "secure/snapshot/:id", SnapshotController::updateSnapshot, json::write);
         post(apiPrefix + "secure/snapshot/:id/restore", SnapshotController::restoreSnapshot, json::write);
         get(apiPrefix + "secure/snapshot/:id/downloadtoken", SnapshotController::getSnapshotToken, json::write);

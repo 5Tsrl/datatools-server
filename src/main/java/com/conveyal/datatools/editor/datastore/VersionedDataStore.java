@@ -153,6 +153,7 @@ public class VersionedDataStore {
             while (snapshot.getAll().size() != 0) {
                 version = tx.getNextSnapshotId();
                 LOG.info("Attempting to create snapshot {} for feed {}", version, feedId);
+                // TODO shouldn't we re-assign snapshotTime, feedVersionId, name, comment and current?
                 ret = new Snapshot(feedId, version);
                 snapshot = getSnapshotDb(feedId, version, false);
             }
