@@ -10,8 +10,17 @@ import com.conveyal.datatools.editor.models.transit.Route;
 import com.conveyal.datatools.editor.models.transit.RouteType;
 import com.conveyal.datatools.editor.models.transit.ServiceCalendar;
 import com.conveyal.datatools.editor.models.transit.Stop;
+import com.conveyal.datatools.editor.models.transit.StopTime;
+import com.conveyal.datatools.editor.models.transit.TripDirection;
+import com.conveyal.datatools.editor.models.transit.TripPattern;
+import com.conveyal.datatools.editor.models.transit.Trip;
+import com.conveyal.datatools.editor.models.transit.TripPatternStop;
 import com.conveyal.datatools.manager.models.FeedVersion;
 import com.conveyal.gtfs.loader.Feed;
+import com.conveyal.gtfs.model.Entity;
+import com.conveyal.gtfs.model.Pattern;
+import com.conveyal.gtfs.model.Shape;
+import com.conveyal.gtfs.model.ShapePoint;
 import com.google.common.collect.Maps;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -35,8 +44,12 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
     private Map<String, Agency> agencyIdMap = new HashMap<>();
     private Map<String, Route> routeIdMap = new HashMap<>();
     /** map from (gtfs stop ID, database agency ID) -> stop */
-    private Map<Tuple2<String, String>, Stop> stopIdMap = Maps.newHashMap();
+    //private Map<Tuple2<String, String>, Stop> stopIdMap = Maps.newHashMap();
+    private Map<String, Stop> stopIdMap = new HashMap<>();
+    
     private TIntObjectMap<String> routeTypeIdMap = new TIntObjectHashMap<>();
+    //5t
+    private Map<String, Shape> shapeIdMap = new HashMap<>();
 
     private Feed inputFeedTables;
     private EditorFeed editorFeed;
@@ -163,7 +176,7 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
             for (com.conveyal.gtfs.model.Stop gtfsStop : inputFeedTables.stops) {
                 Stop stop = new Stop(gtfsStop, geometryFactory, editorFeed);
                 feedTx.stops.put(stop.id, stop);
-                stopIdMap.put(new Tuple2(gtfsStop.stop_id, editorFeed.id), stop);
+                stopIdMap.put(gtfsStop.stop_id, stop);
                 stopCount++;
             }
 
@@ -316,67 +329,102 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
             }
             // FIXME need to load patterns and trips
             // import trips, stop times and patterns all at once
-//            Map<String, Pattern> patterns = input.patterns;
+            Iterator<com.conveyal.gtfs.model.Pattern> patternIterator = inputFeedTables.patterns.iterator();
+            
+            /*
+             * 
+             *  while (agencyIterator.hasNext()) {
+                com.conveyal.gtfs.model.Agency gtfsAgency = agencyIterator.next();
+                Agency agency = new Agency(gtfsAgency, editorFeed);
+             */
 //            Set<String> processedTrips = new HashSet<>();
-//            for (Entry<String, Pattern> pattern : patterns.entrySet()) {
-//                // it is possible, though unlikely, for two routes to have the same stopping pattern
-//                // we want to ensure they retrieveById different trip patterns
-//                Map<String, TripPattern> tripPatternsByRoute = Maps.newHashMap();
-//                for (String tripId : pattern.getValue().associatedTrips) {
-//
-//                    // TODO: figure out why trips are being added twice. This check prevents that.
-//                    if (processedTrips.contains(tripId)) {
-//                        continue;
-//                    }
-//                    synchronized (status) {
-//                        status.message = "Importing trips... (id: " + tripId + ") " + tripCount + "/" + input.trips.size();
-//                        status.percentComplete = 50 + 45 * tripCount / input.trips.size();
-//                    }
-//                    com.conveyal.gtfs.model.Trip gtfsTrip = input.trips.retrieveById(tripId);
-//
-//                    if (!tripPatternsByRoute.containsKey(gtfsTrip.route_id)) {
-//                        TripPattern pat = createTripPatternFromTrip(gtfsTrip, feedTx);
-//                        feedTx.tripPatterns.put(pat.id, pat);
-//                        tripPatternsByRoute.put(gtfsTrip.route_id, pat);
-//                    }
-//
-//                    // there is more than one pattern per route, but this map is specific to only this pattern
-//                    // generally it will contain exactly one entry, unless there are two routes with identical
-//                    // stopping patterns.
-//                    // (in DC, suppose there were trips on both the E2/weekday and E3/weekend from Friendship Heights
-//                    //  that short-turned at Missouri and 3rd).
-//                    TripPattern pat = tripPatternsByRoute.retrieveById(gtfsTrip.route_id);
-//
-//                    ServiceCalendar cal = calendars.retrieveById(gtfsTrip.service_id);
-//
-//                    // if the service calendar has not yet been imported, import it
-//                    if (feedTx.calendars != null && !feedTx.calendars.containsKey(cal.id)) {
-//                        // no need to clone as they are going into completely separate mapdbs
-//                        feedTx.calendars.put(cal.id, cal);
-//                    }
-//
-//                    Trip trip = new Trip(gtfsTrip, routeIdMap.retrieveById(gtfsTrip.route_id), pat, cal);
-//
-//                    // TODO: query ordered stopTimes for a given trip id
-//                    // FIXME: add back in stopTimes
-//                    Collection<com.conveyal.gtfs.model.StopTime> stopTimes = new ArrayList<>();
-//                            input.stopTimes.subMap(new Tuple2(gtfsTrip.trip_id, null), new Tuple2(gtfsTrip.trip_id, Fun.HI)).values();
-//
-//                    for (com.conveyal.gtfs.model.StopTime st : stopTimes) {
-//                        trip.stopTimes.add(new StopTime(st, stopIdMap.retrieveById(new Tuple2<>(st.stop_id, feed.id)).id));
-//                        stopTimeCount++;
-//                    }
-//
-//                    feedTx.trips.put(trip.id, trip);
-//                    processedTrips.add(tripId);
-//                    tripCount++;
-//
-//                    // FIXME add back in total number of trips for QC
-//                    if (tripCount % 1000 == 0) {
-//                        LOG.info("Loaded {} / {} trips", tripCount); // input.trips.size()
-//                    }
-//                }
+//            Map<String, TripPattern> tripPatternsByRoute;
+//            while (patternIterator.hasNext()) {
+//            	com.conveyal.gtfs.model.Pattern gtfsPattern = patternIterator.next();
+//            	tripPatternsByRoute = Maps.newHashMap();
+//            	
+//            	
 //            }
+            //Map<String, Pattern> patterns = input.patterns;
+            
+            int totalTripsCount = inputFeedTables.trips.getRowCount();
+            
+            Set<String> processedTrips = new HashSet<>();
+            Map<String, TripPattern> tripPatternsByRoute;
+            while (patternIterator.hasNext()) {
+            	Pattern pattern = patternIterator.next();
+            //for (Entry<String, Pattern> pattern : patterns.entrySet()) {
+                // it is possible, though unlikely, for two routes to have the same stopping pattern
+                // we want to ensure they retrieveById different trip patterns
+                //Map<String, TripPattern> tripPatternsByRoute = Maps.newHashMap();
+            	tripPatternsByRoute = Maps.newHashMap();
+            	Iterator<com.conveyal.gtfs.model.Trip> tripIterator = (Iterator<com.conveyal.gtfs.model.Trip>) inputFeedTables.trips.getFiltered("pattern_id", pattern.pattern_id);
+            	
+            	while (tripIterator.hasNext()) {
+            		com.conveyal.gtfs.model.Trip gtfsTrip = tripIterator.next();
+                //for (String tripId : pattern.getValue().associatedTrips) {
+
+                    // TODO: figure out why trips are being added twice. This check prevents that.
+                    //if (processedTrips.contains(tripId)) {
+            		if (processedTrips.contains(gtfsTrip.trip_id)) {
+                        continue;
+                    }
+                    synchronized (status) {
+                    	
+                        status.message = "Importing trips... (id: " + gtfsTrip.trip_id + ") " + tripCount + "/" + totalTripsCount;
+                        status.percentComplete = 50 + 45 * tripCount / totalTripsCount;
+                    }
+                    //com.conveyal.gtfs.model.Trip gtfsTrip = input.trips.retrieveById(trip.trip_id);
+
+                    if (!tripPatternsByRoute.containsKey(gtfsTrip.route_id)) {
+                        TripPattern pat = createTripPatternFromTrip(gtfsTrip, feedTx, pattern);
+                        feedTx.tripPatterns.put(pat.id, pat);
+                       tripPatternsByRoute.put(gtfsTrip.route_id, pat);
+                    }
+
+                    // there is more than one pattern per route, but this map is specific to only this pattern
+                    // generally it will contain exactly one entry, unless there are two routes with identical
+                    // stopping patterns.
+                    // (in DC, suppose there were trips on both the E2/weekday and E3/weekend from Friendship Heights
+                    //  that short-turned at Missouri and 3rd).
+                    //TripPattern pat = tripPatternsByRoute.retrieveById(gtfsTrip.route_id);
+                    TripPattern pat = tripPatternsByRoute.get(gtfsTrip.route_id);
+
+                    //ServiceCalendar cal = calendars.retrieveById(gtfsTrip.service_id);
+                    ServiceCalendar cal = calendars.get(gtfsTrip.service_id);
+
+                    // if the service calendar has not yet been imported, import it
+                    if (feedTx.calendars != null && !feedTx.calendars.containsKey(cal.id)) {
+                        // no need to clone as they are going into completely separate mapdbs
+                        feedTx.calendars.put(cal.id, cal);
+                    }
+
+                    //Trip trip = new Trip(gtfsTrip, routeIdMap.retrieveById(gtfsTrip.route_id), pat, cal);
+                    Trip trip = new Trip(gtfsTrip, routeIdMap.get(gtfsTrip.route_id), pat, cal);
+
+                    // TODO: query ordered stopTimes for a given trip id
+                    // FIXME: add back in stopTimes
+                    //Collection<com.conveyal.gtfs.model.StopTime> stopTimes = new ArrayList<>();
+                            //input.stopTimes.subMap(new Tuple2(gtfsTrip.trip_id, null), new Tuple2(gtfsTrip.trip_id, Fun.HI)).values();
+                    Iterator<com.conveyal.gtfs.model.StopTime> stopTimesIterator = (Iterator<com.conveyal.gtfs.model.StopTime>) inputFeedTables.stopTimes.getOrdered(gtfsTrip.trip_id);
+                    
+                    com.conveyal.gtfs.model.StopTime st;
+                    while(stopTimesIterator.hasNext()) {      	
+                        //for (com.conveyal.gtfs.model.StopTime st : stopTimes) {
+                    	st = stopTimesIterator.next();
+                    	trip.stopTimes.add(new StopTime(st, stopIdMap.get(st.stop_id).id));
+                    }
+
+                    feedTx.trips.put(trip.id, trip);
+                    processedTrips.add(gtfsTrip.trip_id);
+                    tripCount++;
+
+                    // FIXME add back in total number of trips for QC
+                    if (tripCount % 1000 == 0) {
+                        LOG.info("Loaded {} / {} trips", tripCount); // input.trips.size()
+                    }
+                }
+            }
 
             LOG.info("Trips loaded: " + tripCount);
             synchronized (status) {
@@ -456,83 +504,117 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
      * Create a trip pattern from the given trip.
      * Neither the TripPattern nor the TripPatternStops are saved.
      */
-//    public TripPattern createTripPatternFromTrip (com.conveyal.gtfs.model.Trip gtfsTrip, FeedTx tx) {
-//        TripPattern patt = new TripPattern();
-//        com.conveyal.gtfs.model.Route gtfsRoute = input.routes.retrieveById(gtfsTrip.route_id);
-//        patt.routeId = routeIdMap.retrieveById(gtfsTrip.route_id).id;
-//        patt.feedId = feed.id;
-//
-//        String patternId = input.tripPatternMap.retrieveById(gtfsTrip.trip_id);
-//        Pattern gtfsPattern = input.patterns.retrieveById(patternId);
-//        patt.shape = gtfsPattern.geometry;
-//        patt.id = gtfsPattern.pattern_id;
-//
-//        patt.patternStops = new ArrayList<>();
-//        patt.patternDirection = TripDirection.fromGtfs(gtfsTrip.direction_id);
-//
-//        com.conveyal.gtfs.model.StopTime[] stopTimes =
-//                input.stop_times.subMap(new Tuple2(gtfsTrip.trip_id, 0), new Tuple2(gtfsTrip.trip_id, Fun.HI)).values().toArray(new com.conveyal.gtfs.model.StopTime[0]);
-//
-//        if (gtfsTrip.trip_headsign != null && !gtfsTrip.trip_headsign.isEmpty())
-//            patt.name = gtfsTrip.trip_headsign;
-//        else
-//            patt.name = gtfsPattern.name;
-//
-//        for (com.conveyal.gtfs.model.StopTime st : stopTimes) {
-//            TripPatternStop tps = new TripPatternStop();
-//
-//            Stop stop = stopIdMap.retrieveById(new Tuple2(st.stop_id, patt.feedId));
-//            tps.stopId = stop.id;
-//
-//            // set timepoint according to first gtfs value and then whether arrival and departure times are present
-//            if (st.timepoint != Entity.INT_MISSING)
-//                tps.timepoint = st.timepoint == 1;
-//            else if (st.arrival_time != Entity.INT_MISSING && st.departure_time != Entity.INT_MISSING) {
-//                tps.timepoint = true;
-//            }
-//            else
-//                tps.timepoint = false;
-//
-//            if (st.departure_time != Entity.INT_MISSING && st.arrival_time != Entity.INT_MISSING)
-//                tps.defaultDwellTime = st.departure_time - st.arrival_time;
-//            else
-//                tps.defaultDwellTime = 0;
-//
-//            patt.patternStops.add(tps);
-//        }
-//
-//        patt.calcShapeDistTraveled(tx);
-//
-//        // infer travel times
-//        if (stopTimes.length >= 2) {
-//            int startOfBlock = 0;
-//            // start at one because the first stop has no travel time
-//            // but don't put nulls in the data
-//            patt.patternStops.retrieveById(0).defaultTravelTime = 0;
-//            for (int i = 1; i < stopTimes.length; i++) {
-//                com.conveyal.gtfs.model.StopTime current = stopTimes[i];
-//
-//                if (current.arrival_time != Entity.INT_MISSING) {
-//                    // interpolate times
-//
-//                    int timeSinceLastSpecifiedTime = current.arrival_time - stopTimes[startOfBlock].departure_time;
-//
-//                    double blockLength = patt.patternStops.retrieveById(i).shapeDistTraveled - patt.patternStops.retrieveById(startOfBlock).shapeDistTraveled;
-//
-//                    // go back over all of the interpolated stop times and interpolate them
-//                    for (int j = startOfBlock + 1; j <= i; j++) {
-//                        TripPatternStop tps = patt.patternStops.retrieveById(j);
-//                        double distFromLastStop = patt.patternStops.retrieveById(j).shapeDistTraveled - patt.patternStops.retrieveById(j - 1).shapeDistTraveled;
-//                        tps.defaultTravelTime = (int) Math.round(timeSinceLastSpecifiedTime * distFromLastStop / blockLength);
-//                    }
-//
-//                    startOfBlock = i;
-//                }
-//            }
-//        }
-//
-//        return patt;
-//    }
+    public TripPattern createTripPatternFromTrip (com.conveyal.gtfs.model.Trip gtfsTrip, FeedTx tx, Pattern pattern) {
+        TripPattern patt = new TripPattern();
+        //com.conveyal.gtfs.model.Route gtfsRoute = input.routes.retrieveById(gtfsTrip.route_id);
+        //Iterator<com.conveyal.gtfs.model.Route> gtfsRoute  = inputFeedTables.routes.iterator();
+        //patt.routeId = routeIdMap.retrieveById(gtfsTrip.route_id).id;
+        patt.routeId = routeIdMap.get(gtfsTrip.route_id).id;
+        //patt.feedId = feed.id;
+        patt.feedId = routeIdMap.get(gtfsTrip.route_id).feedId;
+
+        //String patternId = input.tripPatternMap.retrieveById(gtfsTrip.trip_id);
+        //Pattern gtfsPattern = input.patterns.retrieveById(patternId);
+        Iterator<ShapePoint> shapePoints = (Iterator<ShapePoint>) inputFeedTables.shapePoints.getOrdered(gtfsTrip.shape_id);
+        Shape shape;
+        if(!shapeIdMap.containsKey(gtfsTrip.shape_id)) {
+        	shape = new Shape(shapePoints);
+        	shapeIdMap.put(gtfsTrip.shape_id, shape);
+        }
+        else
+        	shape = shapeIdMap.get(gtfsTrip.shape_id);
+        
+        //patt.shape = gtfsPattern.geometry;
+        patt.shape = shape.geometry;
+        //patt.id = gtfsPattern.pattern_id;
+        patt.id = gtfsTrip.pattern_id;
+        
+        patt.patternStops = new ArrayList<>();
+        patt.patternDirection = TripDirection.fromGtfs(gtfsTrip.direction_id);
+        
+        if (gtfsTrip.trip_headsign != null && !gtfsTrip.trip_headsign.isEmpty())
+            patt.name = gtfsTrip.trip_headsign;
+        else
+           patt.name = pattern.name;
+
+        //com.conveyal.gtfs.model.StopTime[] stopTimes =
+        //       input.stop_times.subMap(new Tuple2(gtfsTrip.trip_id, 0), new Tuple2(gtfsTrip.trip_id, Fun.HI)).values().toArray(new com.conveyal.gtfs.model.StopTime[0]);
+
+        Iterator<com.conveyal.gtfs.model.StopTime> stopTimesIterator = (Iterator<com.conveyal.gtfs.model.StopTime>) inputFeedTables.stopTimes.getOrdered(gtfsTrip.trip_id);
+       
+        com.conveyal.gtfs.model.StopTime st;
+        int stopTimesCount = 0;
+        //arrayList to seek particular element as needed into next loop
+        List<com.conveyal.gtfs.model.StopTime> stopTimes = new ArrayList<>();
+        while(stopTimesIterator.hasNext()) {      	
+        //for (com.conveyal.gtfs.model.StopTime st : stopTimes) {
+        	st = stopTimesIterator.next();
+            TripPatternStop tps = new TripPatternStop();
+
+            //Stop stop = stopIdMap.retrieveById(new Tuple2(st.stop_id, patt.feedId));
+            Stop stop = stopIdMap.get(new Tuple2(st.stop_id, patt.feedId));
+            tps.stopId = stop.id;
+
+            // set timepoint according to first gtfs value and then whether arrival and departure times are present
+            if (st.timepoint != Entity.INT_MISSING)
+                tps.timepoint = st.timepoint == 1;
+            else if (st.arrival_time != Entity.INT_MISSING && st.departure_time != Entity.INT_MISSING) {
+                tps.timepoint = true;
+            }
+            else
+                tps.timepoint = false;
+
+            if (st.departure_time != Entity.INT_MISSING && st.arrival_time != Entity.INT_MISSING)
+                tps.defaultDwellTime = st.departure_time - st.arrival_time;
+            else
+                tps.defaultDwellTime = 0;
+
+            patt.patternStops.add(tps);
+            
+            stopTimes.add(st);
+            stopTimesCount++;
+        }
+
+        patt.calcShapeDistTraveled(tx);
+
+        // infer travel times
+        //if (stopTimes.length >= 2) {
+        if (stopTimesCount >= 2) {
+            int startOfBlock = 0;
+            // start at one because the first stop has no travel time
+            // but don't put nulls in the data
+            //patt.patternStops.retrieveById(0).defaultTravelTime = 0;
+            patt.patternStops.get(0).defaultTravelTime = 0;
+            //for (int i = 1; i < stopTimes.length; i++) {
+            for (int i = 1; i < stopTimesCount; i++) {
+                //com.conveyal.gtfs.model.StopTime current = stopTimes[i];
+            	com.conveyal.gtfs.model.StopTime current = stopTimes.get(i);
+
+                if (current.arrival_time != Entity.INT_MISSING) {
+                    // interpolate times
+
+                    //int timeSinceLastSpecifiedTime = current.arrival_time - stopTimes[startOfBlock].departure_time;
+                    int timeSinceLastSpecifiedTime = current.arrival_time - stopTimes.get(startOfBlock).departure_time;
+
+                    //double blockLength = patt.patternStops.retrieveById(i).shapeDistTraveled - patt.patternStops.retrieveById(startOfBlock).shapeDistTraveled;
+                    double blockLength = patt.patternStops.get(i).shapeDistTraveled - patt.patternStops.get(startOfBlock).shapeDistTraveled;
+                    
+                    // go back over all of the interpolated stop times and interpolate them
+                    for (int j = startOfBlock + 1; j <= i; j++) {
+                        //TripPatternStop tps = patt.patternStops.retrieveById(j);
+                    	TripPatternStop tps = patt.patternStops.get(j);
+                        //double distFromLastStop = patt.patternStops.retrieveById(j).shapeDistTraveled - patt.patternStops.retrieveById(j - 1).shapeDistTraveled;
+                        double distFromLastStop = patt.patternStops.get(j).shapeDistTraveled - patt.patternStops.get(j - 1).shapeDistTraveled;
+                        tps.defaultTravelTime = (int) Math.round(timeSinceLastSpecifiedTime * distFromLastStop / blockLength);
+                    }
+
+                    startOfBlock = i;
+                }
+            }
+        }
+
+        return patt;
+    }
 
 }
 
