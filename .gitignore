@@ -22,3 +22,7 @@ configurations/*
 env.yml
 env.yml-original
 server.yml
+
+.classpath
+.project
+.settings/
