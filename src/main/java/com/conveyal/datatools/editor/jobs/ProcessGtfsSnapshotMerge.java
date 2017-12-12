@@ -1,5 +1,6 @@
 package com.conveyal.datatools.editor.jobs;
 
+import com.google.common.primitives.Ints;
 import com.conveyal.datatools.common.status.MonitorableJob;
 import com.conveyal.datatools.editor.datastore.FeedTx;
 import com.conveyal.datatools.editor.models.Snapshot;
@@ -12,6 +13,8 @@ import com.conveyal.datatools.editor.models.transit.ServiceCalendar;
 import com.conveyal.datatools.editor.models.transit.Stop;
 import com.conveyal.datatools.manager.models.FeedVersion;
 import com.conveyal.gtfs.loader.Feed;
+import com.conveyal.gtfs.model.CalendarDate;
+import com.conveyal.gtfs.model.Service;
 import com.google.common.collect.Maps;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -22,7 +25,9 @@ import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 
 import java.awt.geom.Rectangle2D;
+import java.time.LocalDate;
 
+import org.joda.time.DateTimeConstants;
 import org.mapdb.Fun.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -212,97 +217,97 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
             Map<String, ServiceCalendar> calendars = Maps.newHashMap();
 
             // FIXME: add back in services!
-//            for (Service svc : input.services.values()) {
-//
-//                ServiceCalendar cal;
-//
-//                if (svc.calendar != null) {
-//                    // easy case: don't have to infer anything!
-//                    cal = new ServiceCalendar(svc.calendar, feed);
-//                } else {
-//                    // infer a calendar
-//                    // number of mondays, etc. that this calendar is active
-//                    int monday, tuesday, wednesday, thursday, friday, saturday, sunday;
-//                    monday = tuesday = wednesday = thursday = friday = saturday = sunday = 0;
-//                    LocalDate startDate = null;
-//                    LocalDate endDate = null;
-//
-//                    for (CalendarDate cd : svc.calendar_dates.values()) {
-//                        if (cd.exception_type == 2)
-//                            continue;
-//
-//                        if (startDate == null || cd.date.isBefore(startDate))
-//                            startDate = cd.date;
-//
-//                        if (endDate == null || cd.date.isAfter(endDate))
-//                            endDate = cd.date;
-//
-//                        int dayOfWeek = cd.date.getDayOfWeek().getValue();
-//
-//                        switch (dayOfWeek) {
-//                        case DateTimeConstants.MONDAY:
-//                            monday++;
-//                            break;
-//                        case DateTimeConstants.TUESDAY:
-//                            tuesday++;
-//                            break;
-//                        case DateTimeConstants.WEDNESDAY:
-//                            wednesday++;
-//                            break;
-//                        case DateTimeConstants.THURSDAY:
-//                            thursday++;
-//                            break;
-//                        case DateTimeConstants.FRIDAY:
-//                            friday++;
-//                            break;
-//                        case DateTimeConstants.SATURDAY:
-//                            saturday++;
-//                            break;
-//                        case DateTimeConstants.SUNDAY:
-//                            sunday++;
-//                            break;
-//                        }
-//                    }
-//
-//                    // infer the calendar. if there is service on more than half as many as the maximum number of
-//                    // a particular day that has service, assume that day has service in general.
-//                    int maxService = Ints.max(monday, tuesday, wednesday, thursday, friday, saturday, sunday);
-//
-//                    cal = new ServiceCalendar();
-//                    cal.feedId = feed.id;
-//
-//                    if (startDate == null) {
-//                        // no service whatsoever
-//                        LOG.warn("Service ID " + svc.service_id + " has no service whatsoever");
-//                        startDate = LocalDate.now().minusMonths(1);
-//                        endDate = startDate.plusYears(1);
-//                        cal.monday = cal.tuesday = cal.wednesday = cal.thursday = cal.friday = cal.saturday = cal.sunday = false;
-//                    }
-//                    else {
-//                        // infer parameters
-//
-//                        int threshold = (int) Math.round(Math.ceil((double) maxService / 2));
-//
-//                        cal.monday = monday >= threshold;
-//                        cal.tuesday = tuesday >= threshold;
-//                        cal.wednesday = wednesday >= threshold;
-//                        cal.thursday = thursday >= threshold;
-//                        cal.friday = friday >= threshold;
-//                        cal.saturday = saturday >= threshold;
-//                        cal.sunday = sunday >= threshold;
-//
-//                        cal.startDate = startDate;
-//                        cal.endDate = endDate;
-//                    }
-//
-//                    cal.inferName();
-//                    cal.gtfsServiceId = svc.service_id;
-//                }
-//
-//                calendars.put(svc.service_id, cal);
-//
-//                serviceCalendarCount++;
-//            }
+            for (Service svc : inputFeedTables.services.values()) {
+
+                ServiceCalendar cal;
+
+                if (svc.calendar != null) {
+                    // easy case: don't have to infer anything!
+                    cal = new ServiceCalendar(svc.calendar, editorFeed);
+                } else {
+                    // infer a calendar
+                    // number of mondays, etc. that this calendar is active
+                    int monday, tuesday, wednesday, thursday, friday, saturday, sunday;
+                    monday = tuesday = wednesday = thursday = friday = saturday = sunday = 0;
+                    LocalDate startDate = null;
+                    LocalDate endDate = null;
+
+                    for (CalendarDate cd : svc.calendar_dates.values()) {
+                        if (cd.exception_type == 2)
+                            continue;
+
+                        if (startDate == null || cd.date.isBefore(startDate))
+                            startDate = cd.date;
+
+                        if (endDate == null || cd.date.isAfter(endDate))
+                            endDate = cd.date;
+
+                        int dayOfWeek = cd.date.getDayOfWeek().getValue();
+
+                        switch (dayOfWeek) {
+                        case DateTimeConstants.MONDAY:
+                            monday++;
+                            break;
+                        case DateTimeConstants.TUESDAY:
+                            tuesday++;
+                            break;
+                        case DateTimeConstants.WEDNESDAY:
+                            wednesday++;
+                            break;
+                        case DateTimeConstants.THURSDAY:
+                            thursday++;
+                            break;
+                        case DateTimeConstants.FRIDAY:
+                            friday++;
+                            break;
+                        case DateTimeConstants.SATURDAY:
+                            saturday++;
+                            break;
+                        case DateTimeConstants.SUNDAY:
+                            sunday++;
+                            break;
+                        }
+                    }
+
+                    // infer the calendar. if there is service on more than half as many as the maximum number of
+                    // a particular day that has service, assume that day has service in general.
+                    int maxService = Ints.max(monday, tuesday, wednesday, thursday, friday, saturday, sunday);
+
+                    cal = new ServiceCalendar();
+                    cal.feedId = editorFeed.id;
+
+                    if (startDate == null) {
+                        // no service whatsoever
+                        LOG.warn("Service ID " + svc.service_id + " has no service whatsoever");
+                        startDate = LocalDate.now().minusMonths(1);
+                        endDate = startDate.plusYears(1);
+                        cal.monday = cal.tuesday = cal.wednesday = cal.thursday = cal.friday = cal.saturday = cal.sunday = false;
+                    }
+                    else {
+                        // infer parameters
+
+                        int threshold = (int) Math.round(Math.ceil((double) maxService / 2));
+
+                        cal.monday = monday >= threshold;
+                        cal.tuesday = tuesday >= threshold;
+                        cal.wednesday = wednesday >= threshold;
+                        cal.thursday = thursday >= threshold;
+                        cal.friday = friday >= threshold;
+                        cal.saturday = saturday >= threshold;
+                        cal.sunday = sunday >= threshold;
+
+                        cal.startDate = startDate;
+                        cal.endDate = endDate;
+                    }
+
+                    cal.inferName();
+                    cal.gtfsServiceId = svc.service_id;
+                }
+
+                calendars.put(svc.service_id, cal);
+
+                serviceCalendarCount++;
+            }
 
             LOG.info("Service calendars loaded: " + serviceCalendarCount);
             synchronized (status) {
