@@ -1,6 +1,7 @@
 package com.conveyal.datatools.editor.jobs;
 
 import com.google.common.primitives.Ints;
+import com.amazonaws.services.ec2.model.RouteState;
 import com.conveyal.datatools.common.status.MonitorableJob;
 import com.conveyal.datatools.editor.datastore.FeedTx;
 import com.conveyal.datatools.editor.models.Snapshot;
@@ -10,6 +11,7 @@ import com.conveyal.datatools.editor.models.transit.GtfsRouteType;
 import com.conveyal.datatools.editor.models.transit.Route;
 import com.conveyal.datatools.editor.models.transit.RouteType;
 import com.conveyal.datatools.editor.models.transit.ServiceCalendar;
+import com.conveyal.datatools.editor.models.transit.StatusType;
 import com.conveyal.datatools.editor.models.transit.Stop;
 import com.conveyal.datatools.editor.models.transit.StopTime;
 import com.conveyal.datatools.editor.models.transit.TripDirection;
@@ -17,6 +19,7 @@ import com.conveyal.datatools.editor.models.transit.TripPattern;
 import com.conveyal.datatools.editor.models.transit.Trip;
 import com.conveyal.datatools.editor.models.transit.TripPatternStop;
 import com.conveyal.datatools.manager.models.FeedVersion;
+import com.conveyal.datatools.manager.persistence.Persistence;
 import com.conveyal.gtfs.loader.Feed;
 import com.conveyal.gtfs.model.Entity;
 import com.conveyal.gtfs.model.Pattern;
@@ -207,6 +210,9 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
                 }
 
                 Route route = new Route(gtfsRoute, editorFeed, agency);
+                //convenience default
+                route.status = StatusType.APPROVED;
+                route.publiclyVisible = true;
 
                 feedTx.routes.put(route.id, route);
                 routeIdMap.put(gtfsRoute.route_id, route);
@@ -363,7 +369,7 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
                 // we want to ensure they retrieveById different trip patterns
                 //Map<String, TripPattern> tripPatternsByRoute = Maps.newHashMap();
             	tripPatternsByRoute = Maps.newHashMap();
-            	Iterator<com.conveyal.gtfs.model.Trip> tripIterator = (Iterator<com.conveyal.gtfs.model.Trip>) inputFeedTables.trips.getFiltered("pattern_id", pattern.pattern_id);
+                Iterator<com.conveyal.gtfs.model.Trip> tripIterator = inputFeedTables.trips.getFiltered("pattern_id", pattern.pattern_id).iterator();
             	
             	while (tripIterator.hasNext()) {
             		com.conveyal.gtfs.model.Trip gtfsTrip = tripIterator.next();
@@ -411,7 +417,7 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
                     // FIXME: add back in stopTimes
                     //Collection<com.conveyal.gtfs.model.StopTime> stopTimes = new ArrayList<>();
                             //input.stopTimes.subMap(new Tuple2(gtfsTrip.trip_id, null), new Tuple2(gtfsTrip.trip_id, Fun.HI)).values();
-                    Iterator<com.conveyal.gtfs.model.StopTime> stopTimesIterator = (Iterator<com.conveyal.gtfs.model.StopTime>) inputFeedTables.stopTimes.getOrdered(gtfsTrip.trip_id);
+                    Iterator<com.conveyal.gtfs.model.StopTime> stopTimesIterator = inputFeedTables.stopTimes.getOrdered(gtfsTrip.trip_id).iterator();
                     
                     com.conveyal.gtfs.model.StopTime st;
                     while(stopTimesIterator.hasNext()) {      	
@@ -461,7 +467,8 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
             Snapshot.deactivateSnapshots(feedVersion.feedSourceId, null);
             // create an initial snapshot for this FeedVersion
             Snapshot snapshot = VersionedDataStore.takeSnapshot(editorFeed.id, feedVersion.id, "Snapshot of " + feedVersion.getName(), "none");
-
+            // set snapshot_id into relative FeedVersion in mongo collection
+            Persistence.feedVersions.updateField(feedVersion.id, "snapshotId", snapshot.snapshotId);
 
             LOG.info("Imported GTFS file: " + agencyCount + " agencies; " + routeCount + " routes;" + stopCount + " stops; " +  stopTimeCount + " stopTimes; " + tripCount + " trips;" + shapePointCount + " shapePoints");
             synchronized (status) {
@@ -520,7 +527,7 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
 
         //String patternId = input.tripPatternMap.retrieveById(gtfsTrip.trip_id);
         //Pattern gtfsPattern = input.patterns.retrieveById(patternId);
-        Iterator<ShapePoint> shapePoints = (Iterator<ShapePoint>) inputFeedTables.shapePoints.getOrdered(gtfsTrip.shape_id);
+        Iterator<ShapePoint> shapePoints = inputFeedTables.shapePoints.getOrdered(gtfsTrip.shape_id).iterator();
         Shape shape;
         if(!shapeIdMap.containsKey(gtfsTrip.shape_id)) {
         	shape = new Shape(shapePoints);
@@ -545,7 +552,7 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
         //com.conveyal.gtfs.model.StopTime[] stopTimes =
         //       input.stop_times.subMap(new Tuple2(gtfsTrip.trip_id, 0), new Tuple2(gtfsTrip.trip_id, Fun.HI)).values().toArray(new com.conveyal.gtfs.model.StopTime[0]);
 
-        Iterator<com.conveyal.gtfs.model.StopTime> stopTimesIterator = (Iterator<com.conveyal.gtfs.model.StopTime>) inputFeedTables.stopTimes.getOrdered(gtfsTrip.trip_id);
+        Iterator<com.conveyal.gtfs.model.StopTime> stopTimesIterator = inputFeedTables.stopTimes.getOrdered(gtfsTrip.trip_id).iterator();
        
         com.conveyal.gtfs.model.StopTime st;
         int stopTimesCount = 0;
@@ -557,7 +564,7 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
             TripPatternStop tps = new TripPatternStop();
 
             //Stop stop = stopIdMap.retrieveById(new Tuple2(st.stop_id, patt.feedId));
-            Stop stop = stopIdMap.get(new Tuple2(st.stop_id, patt.feedId));
+            Stop stop = stopIdMap.get(st.stop_id);
             tps.stopId = stop.id;
 
             // set timepoint according to first gtfs value and then whether arrival and departure times are present

@@ -13,19 +13,19 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 
 /**
- * Process/validate a single GTFS feed
- * @author mattwigway
+ * Process (load, validate, take snapshot and build network) an uploaded GTFS version
+ * @author 5t
  *
  */
-public class ProcessSingleFeedJob extends MonitorableJob {
+public class ProcessUploadedVersionJob extends MonitorableJob {
     private FeedVersion feedVersion;
     private String owner;
-    private static final Logger LOG = LoggerFactory.getLogger(ProcessSingleFeedJob.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ProcessUploadedVersionJob.class);
 
     /**
      * Create a job for the given feed version.
      */
-    public ProcessSingleFeedJob (FeedVersion feedVersion, String owner) {
+    public ProcessUploadedVersionJob (FeedVersion feedVersion, String owner) {
         super(owner, "Processing GTFS for " + feedVersion.parentFeedSource().name, JobType.PROCESS_FEED);
         this.feedVersion = feedVersion;
         this.owner = owner;
@@ -58,13 +58,11 @@ public class ProcessSingleFeedJob extends MonitorableJob {
         // Next, validate the feed.
         addNextJob(new ValidateFeedJob(feedVersion, owner));
 
-//        // Use this FeedVersion to seed Editor DB (provided no snapshots for feed already exist).
-//        if(DataManager.isModuleEnabled("editor")) {
-//            // chain snapshot-creation job if no snapshots currently exist for feed
-//            if (Snapshot.getSnapshots(feedVersion.feedSourceId).size() == 0) {
-//                addNextJob(new ProcessGtfsSnapshotMerge(feedVersion, owner));
-//            }
-//        }
+        // Use this FeedVersion to seed Editor DB .
+        if(DataManager.isModuleEnabled("editor")) {
+            // always create a snapshot to be linked to this version
+            addNextJob(new ProcessGtfsSnapshotMerge(feedVersion, owner));
+        }
 
         // chain on a network builder job, if applicable
         if(DataManager.isModuleEnabled("r5_network")) {

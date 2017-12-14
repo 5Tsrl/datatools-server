@@ -35,6 +35,9 @@ public class Snapshot implements Cloneable, Serializable {
     /** The name of this snapshot */
     public String name;
 
+    /** The serialized / String id  */
+    public String snapshotId;
+
     /** The comment of this snapshot */
     public String comment;
 
@@ -70,6 +73,7 @@ public class Snapshot implements Cloneable, Serializable {
         this.feedId = feedId;
         this.version = version;
         this.computeId();
+        this.snapshotId = JacksonSerializers.Tuple2IntSerializer.serialize(this.id);
     }
 
     /** create an ID for this snapshot based on agency ID and version */

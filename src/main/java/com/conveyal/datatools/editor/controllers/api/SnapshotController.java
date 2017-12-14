@@ -183,12 +183,9 @@ public class SnapshotController {
 
         String snapshotId = feedVersion.snapshotId;
         req.attribute("id", snapshotId);
-//        ProcessGtfsSnapshotMerge processGtfsSnapshotMergeJob =
-//                new ProcessGtfsSnapshotMerge(feedVersion, userProfile.getUser_id());
-//
-//        DataManager.heavyExecutor.execute(processGtfsSnapshotMergeJob);
+        
         SnapshotController.restoreSnapshot(req, res);
-        halt(200, "{status: \"ok\"}");
+        halt(200, "[]");
         return null;
     }
 
@@ -228,6 +225,9 @@ public class SnapshotController {
 
     public static Object restoreSnapshot (Request req, Response res) {
         String id = req.params("id");
+        if(id == null) {
+            id = req.attribute("id");
+        }
         Tuple2<String, Integer> decodedId = null;
         try {
             decodedId = JacksonSerializers.Tuple2IntDeserializer.deserialize(id);

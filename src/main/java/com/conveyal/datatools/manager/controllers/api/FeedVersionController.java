@@ -8,6 +8,7 @@ import com.conveyal.datatools.manager.auth.Auth0UserProfile;
 import com.conveyal.datatools.manager.jobs.BuildTransportNetworkJob;
 import com.conveyal.datatools.manager.jobs.CreateFeedVersionFromSnapshotJob;
 import com.conveyal.datatools.manager.jobs.ProcessSingleFeedJob;
+import com.conveyal.datatools.manager.jobs.ProcessUploadedVersionJob;
 import com.conveyal.datatools.manager.jobs.ReadTransportNetworkJob;
 import com.conveyal.datatools.manager.models.FeedDownloadToken;
 import com.conveyal.datatools.manager.models.FeedSource;
@@ -163,10 +164,12 @@ public class FeedVersionController  {
         // TODO newFeedVersion.fileTimestamp still exists
 
         // Must be handled by executor because it takes a long time.
-        ProcessSingleFeedJob processSingleFeedJob = new ProcessSingleFeedJob(newFeedVersion, userProfile.getUser_id());
-        DataManager.heavyExecutor.execute(processSingleFeedJob);
+        //ProcessSingleFeedJob processSingleFeedJob = new ProcessSingleFeedJob(newFeedVersion, userProfile.getUser_id());
+        // this job also creates a snapshot
+        ProcessUploadedVersionJob processUploadedVersionJob = new ProcessUploadedVersionJob(newFeedVersion, userProfile.getUser_id());
+        DataManager.heavyExecutor.execute(processUploadedVersionJob);
 
-        return processSingleFeedJob.jobId;
+        return processUploadedVersionJob.jobId;
     }
 
     public static boolean createFeedVersionFromSnapshot (Request req, Response res) throws IOException, ServletException {
@@ -176,6 +179,7 @@ public class FeedVersionController  {
         FeedSource feedSource = requestFeedSourceById(req, "manage");
         FeedVersion feedVersion = new FeedVersion(feedSource);
         feedVersion.snapshotId = req.queryParams("snapshotId");
+        // this job does not create a new snapshot. 
         CreateFeedVersionFromSnapshotJob createFromSnapshotJob =
                 new CreateFeedVersionFromSnapshotJob(feedVersion, req.queryParams("snapshotId"), userProfile.getUser_id());
         DataManager.heavyExecutor.execute(createFromSnapshotJob);
