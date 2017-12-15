@@ -527,17 +527,21 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
 
         //String patternId = input.tripPatternMap.retrieveById(gtfsTrip.trip_id);
         //Pattern gtfsPattern = input.patterns.retrieveById(patternId);
-        Iterator<ShapePoint> shapePoints = inputFeedTables.shapePoints.getOrdered(gtfsTrip.shape_id).iterator();
-        Shape shape;
-        if(!shapeIdMap.containsKey(gtfsTrip.shape_id)) {
-        	shape = new Shape(shapePoints);
-        	shapeIdMap.put(gtfsTrip.shape_id, shape);
-        }
-        else
-        	shape = shapeIdMap.get(gtfsTrip.shape_id);
         
-        //patt.shape = gtfsPattern.geometry;
-        patt.shape = shape.geometry;
+        Shape shape;
+        if(gtfsTrip.shape_id != null) {
+        	Iterator<ShapePoint> shapePoints = inputFeedTables.shapePoints.getOrdered(gtfsTrip.shape_id).iterator();
+	        if(!shapeIdMap.containsKey(gtfsTrip.shape_id)) {
+	        	shape = new Shape(shapePoints);
+	        	shapeIdMap.put(gtfsTrip.shape_id, shape);
+	        }
+	        else {
+	        	shape = shapeIdMap.get(gtfsTrip.shape_id);
+	        }
+	        //patt.shape = gtfsPattern.geometry;
+	        patt.shape = shape.geometry;
+        }
+
         //patt.id = gtfsPattern.pattern_id;
         patt.id = gtfsTrip.pattern_id;
         
