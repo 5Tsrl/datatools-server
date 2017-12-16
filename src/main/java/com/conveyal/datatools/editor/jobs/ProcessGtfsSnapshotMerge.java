@@ -336,55 +336,34 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
                 status.message = "Service calendars loaded: " + serviceCalendarCount;
                 status.percentComplete = 45;
             }
+
             LOG.info("GtfsImporter: importing trips...");
             synchronized (status) {
                 status.message = "Importing trips...";
                 status.percentComplete = 50;
             }
-            // FIXME need to load patterns and trips
             // import trips, stop times and patterns all at once
-            Iterator<com.conveyal.gtfs.model.Pattern> patternIterator = inputFeedTables.patterns.iterator();
-            
-            /*
-             * 
-             *  while (agencyIterator.hasNext()) {
-                com.conveyal.gtfs.model.Agency gtfsAgency = agencyIterator.next();
-                Agency agency = new Agency(gtfsAgency, editorFeed);
-             */
-//            Set<String> processedTrips = new HashSet<>();
-//            Map<String, TripPattern> tripPatternsByRoute;
-//            while (patternIterator.hasNext()) {
-//                com.conveyal.gtfs.model.Pattern gtfsPattern = patternIterator.next();
-//                tripPatternsByRoute = Maps.newHashMap();
-//                
-//                
-//            }
-            //Map<String, Pattern> patterns = input.patterns;
-            
             int totalTripsCount = inputFeedTables.trips.getRowCount();
-            
             Set<String> processedTrips = new HashSet<>();
             Map<String, TripPattern> tripPatternsByRoute;
+            Iterator<com.conveyal.gtfs.model.Pattern> patternIterator = inputFeedTables.patterns.iterator();
             while (patternIterator.hasNext()) {
                 Pattern pattern = patternIterator.next();
-            //for (Entry<String, Pattern> pattern : patterns.entrySet()) {
                 // it is possible, though unlikely, for two routes to have the same stopping pattern
                 // we want to ensure they retrieveById different trip patterns
                 //Map<String, TripPattern> tripPatternsByRoute = Maps.newHashMap();
                 tripPatternsByRoute = Maps.newHashMap();
                 Iterator<com.conveyal.gtfs.model.Trip> tripIterator = inputFeedTables.trips.getFiltered("pattern_id", pattern.pattern_id).iterator();
-                
                 while (tripIterator.hasNext()) {
                     com.conveyal.gtfs.model.Trip gtfsTrip = tripIterator.next();
-                //for (String tripId : pattern.getValue().associatedTrips) {
+                    //for (String tripId : pattern.getValue().associatedTrips) {
 
                     // TODO: figure out why trips are being added twice. This check prevents that.
                     //if (processedTrips.contains(tripId)) {
                     if (processedTrips.contains(gtfsTrip.trip_id)) {
                         continue;
                     }
-                    synchronized (status) {
-                        
+                    synchronized (status) {    
                         status.message = "Importing trips... (id: " + gtfsTrip.trip_id + ") " + tripCount + "/" + totalTripsCount;
                         status.percentComplete = 50 + 45 * tripCount / totalTripsCount;
                     }
@@ -421,7 +400,7 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
                     //Collection<com.conveyal.gtfs.model.StopTime> stopTimes = new ArrayList<>();
                             //input.stopTimes.subMap(new Tuple2(gtfsTrip.trip_id, null), new Tuple2(gtfsTrip.trip_id, Fun.HI)).values();
                     Iterator<com.conveyal.gtfs.model.StopTime> stopTimesIterator = inputFeedTables.stopTimes.getOrdered(gtfsTrip.trip_id).iterator();
-                    
+
                     com.conveyal.gtfs.model.StopTime st;
                     while(stopTimesIterator.hasNext()) {          
                         //for (com.conveyal.gtfs.model.StopTime st : stopTimes) {
@@ -533,14 +512,13 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
         
         LineString geometry;
         if(gtfsTrip.shape_id != null) {
-            Iterator<ShapePoint> shapePointsIterator = inputFeedTables.shapePoints.getOrdered(gtfsTrip.shape_id).iterator();
-            if(!shapeIdMap.containsKey(gtfsTrip.shape_id)) {                
+            if(!shapeIdMap.containsKey(gtfsTrip.shape_id)) {               
                 List<Coordinate> coords = new ArrayList<Coordinate>();
                 ShapePoint shapePoint;
+                Iterator<ShapePoint> shapePointsIterator = inputFeedTables.shapePoints.getOrdered(gtfsTrip.shape_id).iterator();
                 while(shapePointsIterator.hasNext()) {
                     shapePoint = shapePointsIterator.next();
-                    Coordinate coord = new Coordinate(shapePoint.shape_pt_lon, shapePoint.shape_pt_lat);
-                    coords.add(coord);
+                    coords.add(new Coordinate(shapePoint.shape_pt_lon, shapePoint.shape_pt_lat));
                 }
                 geometry = Util.geometryFactory.createLineString(coords.toArray(new Coordinate[coords.size()]));
                 shapeIdMap.put(gtfsTrip.shape_id, geometry);
@@ -640,6 +618,4 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
 
         return patt;
     }
-
 }
-
