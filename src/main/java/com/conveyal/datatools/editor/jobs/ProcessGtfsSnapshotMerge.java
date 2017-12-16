@@ -25,11 +25,14 @@ import com.conveyal.gtfs.model.Entity;
 import com.conveyal.gtfs.model.Pattern;
 import com.conveyal.gtfs.model.Shape;
 import com.conveyal.gtfs.model.ShapePoint;
+import com.conveyal.gtfs.util.Util;
 import com.conveyal.gtfs.model.CalendarDate;
 import com.conveyal.gtfs.model.Service;
 import com.google.common.collect.Maps;
+import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.PrecisionModel;
 import com.conveyal.datatools.editor.datastore.GlobalTx;
 import com.conveyal.datatools.editor.datastore.VersionedDataStore;
@@ -57,7 +60,7 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
     
     private TIntObjectMap<String> routeTypeIdMap = new TIntObjectHashMap<>();
     //5t
-    private Map<String, Shape> shapeIdMap = new HashMap<>();
+    private Map<String, LineString> shapeIdMap = new HashMap<>();
 
     private Feed inputFeedTables;
     private EditorFeed editorFeed;
@@ -351,10 +354,10 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
 //            Set<String> processedTrips = new HashSet<>();
 //            Map<String, TripPattern> tripPatternsByRoute;
 //            while (patternIterator.hasNext()) {
-//            	com.conveyal.gtfs.model.Pattern gtfsPattern = patternIterator.next();
-//            	tripPatternsByRoute = Maps.newHashMap();
-//            	
-//            	
+//                com.conveyal.gtfs.model.Pattern gtfsPattern = patternIterator.next();
+//                tripPatternsByRoute = Maps.newHashMap();
+//                
+//                
 //            }
             //Map<String, Pattern> patterns = input.patterns;
             
@@ -363,25 +366,25 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
             Set<String> processedTrips = new HashSet<>();
             Map<String, TripPattern> tripPatternsByRoute;
             while (patternIterator.hasNext()) {
-            	Pattern pattern = patternIterator.next();
+                Pattern pattern = patternIterator.next();
             //for (Entry<String, Pattern> pattern : patterns.entrySet()) {
                 // it is possible, though unlikely, for two routes to have the same stopping pattern
                 // we want to ensure they retrieveById different trip patterns
                 //Map<String, TripPattern> tripPatternsByRoute = Maps.newHashMap();
-            	tripPatternsByRoute = Maps.newHashMap();
+                tripPatternsByRoute = Maps.newHashMap();
                 Iterator<com.conveyal.gtfs.model.Trip> tripIterator = inputFeedTables.trips.getFiltered("pattern_id", pattern.pattern_id).iterator();
-            	
-            	while (tripIterator.hasNext()) {
-            		com.conveyal.gtfs.model.Trip gtfsTrip = tripIterator.next();
+                
+                while (tripIterator.hasNext()) {
+                    com.conveyal.gtfs.model.Trip gtfsTrip = tripIterator.next();
                 //for (String tripId : pattern.getValue().associatedTrips) {
 
                     // TODO: figure out why trips are being added twice. This check prevents that.
                     //if (processedTrips.contains(tripId)) {
-            		if (processedTrips.contains(gtfsTrip.trip_id)) {
+                    if (processedTrips.contains(gtfsTrip.trip_id)) {
                         continue;
                     }
                     synchronized (status) {
-                    	
+                        
                         status.message = "Importing trips... (id: " + gtfsTrip.trip_id + ") " + tripCount + "/" + totalTripsCount;
                         status.percentComplete = 50 + 45 * tripCount / totalTripsCount;
                     }
@@ -420,10 +423,10 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
                     Iterator<com.conveyal.gtfs.model.StopTime> stopTimesIterator = inputFeedTables.stopTimes.getOrdered(gtfsTrip.trip_id).iterator();
                     
                     com.conveyal.gtfs.model.StopTime st;
-                    while(stopTimesIterator.hasNext()) {      	
+                    while(stopTimesIterator.hasNext()) {          
                         //for (com.conveyal.gtfs.model.StopTime st : stopTimes) {
-                    	st = stopTimesIterator.next();
-                    	trip.stopTimes.add(new StopTime(st, stopIdMap.get(st.stop_id).id));
+                        st = stopTimesIterator.next();
+                        trip.stopTimes.add(new StopTime(st, stopIdMap.get(st.stop_id).id));
                     }
 
                     feedTx.trips.put(trip.id, trip);
@@ -528,18 +531,24 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
         //String patternId = input.tripPatternMap.retrieveById(gtfsTrip.trip_id);
         //Pattern gtfsPattern = input.patterns.retrieveById(patternId);
         
-        Shape shape;
+        LineString geometry;
         if(gtfsTrip.shape_id != null) {
-        	Iterator<ShapePoint> shapePoints = inputFeedTables.shapePoints.getOrdered(gtfsTrip.shape_id).iterator();
-	        if(!shapeIdMap.containsKey(gtfsTrip.shape_id)) {
-	        	shape = new Shape(shapePoints);
-	        	shapeIdMap.put(gtfsTrip.shape_id, shape);
-	        }
-	        else {
-	        	shape = shapeIdMap.get(gtfsTrip.shape_id);
-	        }
-	        //patt.shape = gtfsPattern.geometry;
-	        patt.shape = shape.geometry;
+            Iterator<ShapePoint> shapePointsIterator = inputFeedTables.shapePoints.getOrdered(gtfsTrip.shape_id).iterator();
+            if(!shapeIdMap.containsKey(gtfsTrip.shape_id)) {                
+                List<Coordinate> coords = new ArrayList<Coordinate>();
+                ShapePoint shapePoint;
+                while(shapePointsIterator.hasNext()) {
+                    shapePoint = shapePointsIterator.next();
+                    Coordinate coord = new Coordinate(shapePoint.shape_pt_lon, shapePoint.shape_pt_lat);
+                    coords.add(coord);
+                }
+                geometry = Util.geometryFactory.createLineString(coords.toArray(new Coordinate[coords.size()]));
+                shapeIdMap.put(gtfsTrip.shape_id, geometry);
+            }
+            else {
+                geometry = shapeIdMap.get(gtfsTrip.shape_id);
+            }
+            patt.shape = geometry;
         }
 
         //patt.id = gtfsPattern.pattern_id;
@@ -562,9 +571,9 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
         int stopTimesCount = 0;
         //arrayList to seek particular element as needed into next loop
         List<com.conveyal.gtfs.model.StopTime> stopTimes = new ArrayList<>();
-        while(stopTimesIterator.hasNext()) {      	
+        while(stopTimesIterator.hasNext()) {          
         //for (com.conveyal.gtfs.model.StopTime st : stopTimes) {
-        	st = stopTimesIterator.next();
+            st = stopTimesIterator.next();
             TripPatternStop tps = new TripPatternStop();
 
             //Stop stop = stopIdMap.retrieveById(new Tuple2(st.stop_id, patt.feedId));
@@ -604,7 +613,7 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
             //for (int i = 1; i < stopTimes.length; i++) {
             for (int i = 1; i < stopTimesCount; i++) {
                 //com.conveyal.gtfs.model.StopTime current = stopTimes[i];
-            	com.conveyal.gtfs.model.StopTime current = stopTimes.get(i);
+                com.conveyal.gtfs.model.StopTime current = stopTimes.get(i);
 
                 if (current.arrival_time != Entity.INT_MISSING) {
                     // interpolate times
@@ -618,7 +627,7 @@ public class ProcessGtfsSnapshotMerge extends MonitorableJob {
                     // go back over all of the interpolated stop times and interpolate them
                     for (int j = startOfBlock + 1; j <= i; j++) {
                         //TripPatternStop tps = patt.patternStops.retrieveById(j);
-                    	TripPatternStop tps = patt.patternStops.get(j);
+                        TripPatternStop tps = patt.patternStops.get(j);
                         //double distFromLastStop = patt.patternStops.retrieveById(j).shapeDistTraveled - patt.patternStops.retrieveById(j - 1).shapeDistTraveled;
                         double distFromLastStop = patt.patternStops.get(j).shapeDistTraveled - patt.patternStops.get(j - 1).shapeDistTraveled;
                         tps.defaultTravelTime = (int) Math.round(timeSinceLastSpecifiedTime * distFromLastStop / blockLength);
