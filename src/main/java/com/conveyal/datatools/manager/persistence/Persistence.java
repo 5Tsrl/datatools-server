@@ -3,6 +3,7 @@ package com.conveyal.datatools.manager.persistence;
 import com.conveyal.datatools.manager.DataManager;
 import com.conveyal.datatools.manager.codec.IntArrayCodec;
 import com.conveyal.datatools.manager.codec.LocalDateCodec;
+import com.conveyal.datatools.manager.codec.Tuple2Codec;
 import com.conveyal.datatools.manager.codec.URLCodec;
 import com.conveyal.datatools.manager.models.Deployment;
 import com.conveyal.datatools.manager.models.ExternalFeedSourceProperty;
@@ -62,7 +63,8 @@ public class Persistence {
         CodecRegistry customRegistry = CodecRegistries.fromCodecs(
                 new IntArrayCodec(),
                 new URLCodec(),
-                new LocalDateCodec());
+                new LocalDateCodec(),
+                new Tuple2Codec());
 
         pojoCodecRegistry = fromRegistries(MongoClient.getDefaultCodecRegistry(),
                 customRegistry,
