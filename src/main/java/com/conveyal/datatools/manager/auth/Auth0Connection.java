@@ -22,7 +22,7 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URL;
 
-import static com.conveyal.datatools.common.utils.SparkUtils.haltWithError;
+import static com.conveyal.datatools.common.utils.SparkUtils.haltWithMessage;
 import static com.conveyal.datatools.manager.DataManager.getConfigPropertyAsText;
 import static spark.Spark.before;
 import static spark.Spark.halt;
@@ -50,7 +50,7 @@ public class Auth0Connection {
         String token = getToken(req);
 
         if(token == null) {
-            haltWithError(401, "Could not find authorization token");
+            haltWithMessage(401, "Could not find authorization token");
         }
         Auth0UserProfile profile;
         try {
@@ -59,7 +59,7 @@ public class Auth0Connection {
         }
         catch(Exception e) {
             LOG.warn("Could not verify user", e);
-            haltWithError(401, "Could not verify user");
+            haltWithMessage(401, "Could not verify user");
         }
     }
 
