@@ -18,6 +18,8 @@ import javax.net.ssl.HttpsURLConnection;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.net.URL;
 
 import static com.conveyal.datatools.common.utils.SparkUtils.haltWithError;
@@ -84,7 +86,18 @@ public class Auth0Connection {
     public static Auth0UserProfile getUserProfile(String token) throws Exception {
 
         URL url = new URL("https://" + getConfigPropertyAsText("AUTH0_DOMAIN") + "/tokeninfo");
-        HttpsURLConnection con = (HttpsURLConnection) url.openConnection();
+       
+        String proxyHost = DataManager.getConfigPropertyAsText("PROXY_HOST");
+        HttpsURLConnection con = null;
+
+        if(proxyHost != null && !"".equalsIgnoreCase(proxyHost)) {
+        	Integer proxyPort = new Integer(DataManager.getConfigPropertyAsText("PROXY_PORT"));
+        	Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort));
+        	con = (HttpsURLConnection) url.openConnection(proxy);
+        }
+        else {
+        	con = (HttpsURLConnection) url.openConnection();
+        }
 
         //add request header
         con.setRequestMethod("POST");

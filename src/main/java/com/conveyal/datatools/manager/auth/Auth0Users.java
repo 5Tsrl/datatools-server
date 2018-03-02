@@ -1,11 +1,22 @@
 package com.conveyal.datatools.manager.auth;
 
-import com.conveyal.datatools.manager.DataManager;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static com.conveyal.datatools.manager.DataManager.getConfigPropertyAsText;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.Collection;
+import java.util.HashSet;
+
+import javax.net.ssl.HttpsURLConnection;
+
+import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -13,13 +24,10 @@ import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLEncoder;
-import java.util.Collection;
-import java.util.HashSet;
+import com.conveyal.datatools.manager.DataManager;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * This class contains methods for querying Auth0 users using the Auth0 User Management API. Auth0 docs describing the
@@ -81,6 +89,20 @@ public class Auth0Users {
         HttpClient client = HttpClientBuilder.create().build();
         HttpGet request = new HttpGet(uri);
 
+        String proxyHost = DataManager.getConfigPropertyAsText("PROXY_HOST");
+
+        if(proxyHost != null && !"".equalsIgnoreCase(proxyHost)) {
+
+        	Integer proxyPort = new Integer(DataManager.getConfigPropertyAsText("PROXY_PORT"));
+        	HttpHost proxy = new HttpHost(proxyHost, proxyPort, "http");
+
+        	RequestConfig config = RequestConfig.custom()
+        			.setProxy(proxy)
+        			.build();
+
+        	request.setConfig(config);
+        }
+        
         request.addHeader("Authorization", "Bearer " + AUTH0_API_TOKEN);
         request.setHeader("Accept-Charset", charset);
         HttpResponse response = null;
