@@ -7,10 +7,14 @@ import com.conveyal.datatools.manager.jobs.FetchSingleFeedJob;
 import com.conveyal.datatools.manager.jobs.NotifyUsersForSubscriptionJob;
 import com.conveyal.datatools.manager.models.ExternalFeedSourceProperty;
 import com.conveyal.datatools.manager.models.FeedSource;
+import com.conveyal.datatools.manager.models.FeedVersion;
 import com.conveyal.datatools.manager.models.JsonViews;
+import com.conveyal.datatools.manager.models.Snapshot;
 import com.conveyal.datatools.manager.persistence.Persistence;
 import com.conveyal.datatools.manager.utils.json.JsonManager;
 import com.conveyal.datatools.manager.utils.json.JsonUtil;
+import com.conveyal.gtfs.GTFS;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -179,16 +183,34 @@ public class FeedSourceController {
     }
 
     public static FeedSource deleteFeedSource(Request req, Response res) {
-        FeedSource source = requestFeedSourceById(req, "manage");
+    	FeedSource source = requestFeedSourceById(req, "manage");
 
-        try {
-            Persistence.feedSources.removeById(source.id);
-            return source;
-        } catch (Exception e) {
-            e.printStackTrace();
-            halt(400, "Unknown error deleting feed source.");
-            return null;
-        }
+    	try {
+    		Persistence.feedSources.removeById(source.id);
+    		GTFS.deleteFeedSource(source.editorNamespace, DataManager.GTFS_DATA_SOURCE);
+    		
+    		// retrieve all namespace from version, and snapshort to erase them from database
+    		//
+    		Collection<FeedVersion> listFeedVersion = source.retrieveFeedVersions();
+
+    		for (FeedVersion feedVersion : listFeedVersion) {
+                Persistence.feedVersions.removeById(feedVersion.id);
+    			GTFS.deleteFeedSource(feedVersion.namespace, DataManager.GTFS_DATA_SOURCE);
+    		}
+
+    		Collection<Snapshot> listSnapshot = source.retrieveSnapshots();
+
+    		for (Snapshot snapshot : listSnapshot) {
+    			Persistence.snapshots.removeById(snapshot.id);
+    			GTFS.deleteFeedSource(snapshot.namespace, DataManager.GTFS_DATA_SOURCE);
+    		}
+
+    		return source;
+    	} catch (Exception e) {
+    		e.printStackTrace();
+    		halt(400, "Unknown error deleting feed source.");
+    		return null;
+    	}
     }
 
     /**
