@@ -17,6 +17,7 @@ import com.conveyal.datatools.manager.persistence.FeedStore;
 import com.conveyal.datatools.manager.persistence.Persistence;
 import com.conveyal.datatools.manager.utils.HashUtils;
 import com.conveyal.datatools.manager.utils.json.JsonManager;
+import com.conveyal.gtfs.GTFS;
 import com.conveyal.r5.analyst.PointSet;
 import com.conveyal.r5.analyst.cluster.AnalystClusterRequest;
 import com.conveyal.r5.analyst.cluster.ResultEnvelope;
@@ -207,7 +208,8 @@ public class FeedVersionController  {
      */
     public static FeedVersion deleteFeedVersion(Request req, Response res) {
         FeedVersion version = requestFeedVersion(req, "manage");
-        version.delete();
+        version.delete();        
+        GTFS.deleteFeedVersion(version.namespace, DataManager.GTFS_DATA_SOURCE);        
         return version;
     }
 

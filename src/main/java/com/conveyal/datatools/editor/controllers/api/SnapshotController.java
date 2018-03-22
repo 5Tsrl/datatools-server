@@ -17,6 +17,8 @@ import com.conveyal.datatools.manager.models.Snapshot;
 import com.conveyal.datatools.manager.persistence.FeedStore;
 import com.conveyal.datatools.manager.persistence.Persistence;
 import com.conveyal.datatools.manager.utils.json.JsonManager;
+import com.conveyal.gtfs.GTFS;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -220,6 +222,7 @@ public class SnapshotController {
             feedSource.renumberSnapshots();
             // FIXME Are there references that need to be removed? E.g., what if the active buffer snapshot is deleted?
             // FIXME delete tables from database?
+            GTFS.deleteFeedVersion(snapshot.namespace, DataManager.GTFS_DATA_SOURCE); 
             return snapshot;
         } catch (Exception e) {
             e.printStackTrace();
