@@ -22,3 +22,4 @@ configurations/*
 env.yml
 env.yml-original
 server.yml
+env*yml
