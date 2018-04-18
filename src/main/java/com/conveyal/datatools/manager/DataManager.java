@@ -321,7 +321,7 @@ public class DataManager {
         if (node != null) {
             return node.asText();
         } else {
-            LOG.warn("Config property {} not found", name);
+            LOG.debug("Config property {} not found", name);
             return null;
         }
     }
