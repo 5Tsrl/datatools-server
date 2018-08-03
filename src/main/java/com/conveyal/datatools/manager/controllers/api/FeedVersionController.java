@@ -218,8 +218,8 @@ public class FeedVersionController  {
      */
     private static FeedVersion deleteFeedVersion(Request req, Response res) {
         FeedVersion version = requestFeedVersion(req, "manage");
-        version.delete();        
-        GTFS.deleteFeedVersion(version.namespace, DataManager.GTFS_DATA_SOURCE);        
+        version.delete();
+        GTFS.deleteFeedVersion(version.namespace, DataManager.GTFS_DATA_SOURCE);
         return version;
     }
 
