@@ -115,7 +115,7 @@ public class SnapshotController {
         // explicitly asked for it. Otherwise, let go of the buffer.
         boolean preserveBuffer = "true".equals(req.queryParams("preserveBuffer")) && feedSource.editorNamespace != null;
         CreateSnapshotJob createSnapshotJob =
-                new CreateSnapshotJob(snapshot, true, false, preserveBuffer);
+                new CreateSnapshotJob(snapshot, true, false, true /* 5t preserveBuffer*/);
         DataManager.heavyExecutor.execute(createSnapshotJob);
         return formatJobMessage(createSnapshotJob.jobId, "Importing version as snapshot.");
     }
@@ -215,11 +215,9 @@ public class SnapshotController {
         if (snapshot == null) haltWithMessage(req, 400, "Must provide valid snapshot ID.");
         try {
             // Remove the snapshot and then renumber the snapshots
-            Persistence.snapshots.removeById(snapshot.id);
-            feedSource.renumberSnapshots();
-            // FIXME Are there references that need to be removed? E.g., what if the active buffer snapshot is deleted?
-            // FIXME delete tables from database?
-            GTFS.deleteFeedVersion(snapshot.namespace, DataManager.GTFS_DATA_SOURCE); 
+            // 5t Persistence.snapshots.removeById(snapshot.id);
+            // 5t feedSource.renumberSnapshots();
+        	  snapshot.delete();
             return snapshot;
         } catch (Exception e) {
             e.printStackTrace();

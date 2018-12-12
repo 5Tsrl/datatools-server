@@ -391,6 +391,9 @@ public class FeedVersion extends Model implements Serializable {
                     pull("feedVersionIds", this.id));
             Persistence.feedVersions.removeById(this.id);
             this.parentFeedSource().renumberFeedVersions();
+            // 5t delete namespace (schema) from DB
+            GTFS.delete(this.namespace, DataManager.GTFS_DATA_SOURCE);
+            
             LOG.info("Version {} deleted", id);
         } catch (Exception e) {
             LOG.warn("Error deleting version", e);

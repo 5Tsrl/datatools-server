@@ -6,11 +6,13 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.conveyal.datatools.common.status.MonitorableJob;
 import com.conveyal.datatools.editor.datastore.GlobalTx;
 import com.conveyal.datatools.editor.datastore.VersionedDataStore;
+import com.conveyal.datatools.manager.models.Snapshot;
 import com.conveyal.datatools.manager.DataManager;
 import com.conveyal.datatools.manager.jobs.NotifyUsersForSubscriptionJob;
 import com.conveyal.datatools.manager.persistence.FeedStore;
 import com.conveyal.datatools.manager.persistence.Persistence;
 import com.conveyal.datatools.manager.utils.HashUtils;
+import com.conveyal.gtfs.GTFS;
 import com.conveyal.gtfs.validator.ValidationResult;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -512,6 +514,7 @@ public class FeedSource extends Model implements Cloneable {
     public boolean delete() {
         try {
             retrieveFeedVersions().forEach(FeedVersion::delete);
+            retrieveSnapshots().forEach(Snapshot::delete);
 
             // Delete latest copy of feed source on S3.
             if (DataManager.useS3) {
@@ -524,6 +527,9 @@ public class FeedSource extends Model implements Cloneable {
 
             // FIXME: Should this delete related feed versions from the SQL database (for both published versions and
             // editor snapshots)?
+            
+            //5t delete editorNamespace schema from DB
+            GTFS.delete(editorNamespace, DataManager.GTFS_DATA_SOURCE);
 
             // Finally, delete the feed source mongo document.
             return Persistence.feedSources.removeById(this.id);

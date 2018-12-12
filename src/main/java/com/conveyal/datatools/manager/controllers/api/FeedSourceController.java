@@ -219,22 +219,6 @@ public class FeedSourceController {
 
         try {
             source.delete();
-            /*5T begin*/
-            GTFS.deleteFeedSource(source.editorNamespace, DataManager.GTFS_DATA_SOURCE);
-            // retrieve all version and snapshot namespaces and drop them from database
-            Collection<FeedVersion> listFeedVersion = source.retrieveFeedVersions();
-            for (FeedVersion feedVersion : listFeedVersion) {
-              //Persistence.feedVersions.removeById(feedVersion.id);
-              feedVersion.delete();
-              GTFS.deleteFeedSource(feedVersion.namespace, DataManager.GTFS_DATA_SOURCE);
-            }
-
-            Collection<Snapshot> listSnapshot = source.retrieveSnapshots();
-            for (Snapshot snapshot : listSnapshot) {
-              Persistence.snapshots.removeById(snapshot.id);
-              GTFS.deleteFeedSource(snapshot.namespace, DataManager.GTFS_DATA_SOURCE);
-            }
-            /*5T end*/
             return source;
         } catch (Exception e) {
             LOG.error("Could not delete feed source", e);
